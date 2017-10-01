@@ -1,6 +1,7 @@
 import time
 import pycosat
 import numpy as np
+import pandas as pd
 import csv
 import sys
 import pycosat
@@ -16,7 +17,6 @@ def  create_array_names():
     return puzzle
 
 def encode_at_least_one(puzzle):
-
     clauses_box=[]
     clauses_columns=[]
     clauses_rows=[]
@@ -63,17 +63,27 @@ def encode_at_most_one(puzzle):
 
     return clauses_box+clauses_columns+clauses_rows+clauses_block
 
-def readSudoku(csvfile):
-    #print (csvfile)
-    csvfile = open(csvfile, "rt")
-    reader = csv.reader(csvfile)
-    puzzle=np.zeros((9,9))
-    for row in reader:
-        puzz=row[0]
+def encode_hieuristics(puzzle):
 
+    clauses_hieuristic=[]
+    for i in [1,3,5,7]:
+        for j in [0,2,4,6,8]:
+            for x in posible_numbers:
+                for i2 in range(i,len(puzzle[:]),2):
+                    for j2 in range(j,len(puzzle[0,:]),2):
+                        clauses_hieuristic.append([-1*int(puzzle[i,j,x]),int(puzzle[i,i2,x]),-1*int(puzzle[j2,j,x])])
+
+    print (clauses_hieuristic[:50])
+    return clauses_hieuristic
+
+
+
+def readSudoku(sud_file):
+
+    puzzle=np.zeros((9,9))
     i=0
     j=0
-    for digit in list(puzz):
+    for digit in sud_file:
         if digit=='.':
             puzzle[i][j%9]=0
         else :
@@ -91,7 +101,7 @@ def encode_givens(puzzle,encoding):
         for j in range(len(puzzle)):
                 if puzzle[i][j]!=0:
                     cnf.append([int(encoding[i,j,int(puzzle[i][j])-1])])
-    print (cnf)
+
     return cnf
 
 def create_solution(result_list,encoding):
@@ -102,30 +112,38 @@ def create_solution(result_list,encoding):
             list_r.append(r)
 
     counter=0
+    i=0
+    j=0
     for i in range(9):
         for j in range(9):
             puzzle[i][j]=list_r[counter]-81*i-9*j
             counter+=1
-    print(puzzle)
+    #print(puzzle)
 
 def main():
 
-    puzzle=readSudoku(sys.argv[1])
     encoding=create_array_names()
-    #print (encoding)
-    print (puzzle)
-    cnf1 = encode_at_least_one(encoding)
-    cnf2 = encode_at_most_one(encoding)
-    cnf3 = encode_givens(puzzle,encoding)
-    cnf=cnf1+cnf2+cnf3
-    #cnf = [[1, -5, 4], [-1, 5, 3, 4], [-3, -4]]
-    #print(cnf)
-    start = time.time()
-    result_list = pycosat.solve(cnf)
-    end = time.time()
-    create_solution(result_list,encoding)
-    #print (result_list)
-    #print (len(cnf))
+    #sudokus=readSudoku(sys.argv[1])
+    sudokus=pd.read_csv(sys.argv[1])
+    #print(sudokus)
+    average = 0
+    for index ,sudoku_info in sudokus.iterrows():
+        puzzle=readSudoku(sudoku_info[0])
+        cnf1 = encode_at_least_one(encoding)
+        cnf2 = encode_at_most_one(encoding)
+        cnf3 = encode_hieuristics(encoding)
+        cnf4 = encode_givens(puzzle ,encoding)
+        cnf=cnf1+cnf2+cnf4
+
+        start = time.time()
+        result_list = pycosat.solve(cnf)
+        end = time.time()
+        if result_list=='UNSAT':
+            print ("error")
+
+        create_solution(result_list,encoding)
+        average+=end-start
+    print (average/len(sudokus))
 
 if __name__ == '__main__':
     main()
