@@ -63,17 +63,35 @@ def encode_at_most_one(puzzle):
 
     return clauses_box+clauses_columns+clauses_rows+clauses_block
 
-def encode_hieuristics(puzzle):
+def encode_X_wing(puzzle):
+
 
     clauses_hieuristic=[]
-    for i in [1,3,5,7]:
-        for j in [0,2,4,6,8]:
-            for x in posible_numbers:
-                for i2 in range(i,len(puzzle[:]),2):
-                    for j2 in range(j,len(puzzle[0,:]),2):
-                        clauses_hieuristic.append([-1*int(puzzle[i,j,x]),int(puzzle[i,i2,x]),-1*int(puzzle[j2,j,x])])
+    clauses=[]
+    for x in posible_numbers:
+        for i in [1,3,5,7]:
+            for j in [0,2,4,6,8]:
+                for i2 in  range(i,len(puzzle[:]),2):
+                    for ji in range(1,len(puzzle[:]),2):
+                        clauses=[]
+                        for j2 in range(j,len(puzzle[:]),2):
+                            for jj in range(0,len(puzzle[:]),2):
+                                clauses+=[-1*int(puzzle[i,j,x]),int(puzzle[i2,ji,x]),-1*int(puzzle[jj,j2,x])]
+                        clauses_hieuristic.append(clauses)
 
-    print (clauses_hieuristic[:50])
+    #clauses=[]
+    #for x in posible_numbers:
+    #    for j in [0,2,4,6,8]:
+    #        for i in [1,3,5,7]:
+    #            for j2 in  range(j,len(puzzle[:]),2):
+    #                clauses=[]
+    #                for i2 in range(i,len(puzzle[:]),2):
+    #                    #print(str(i)+str(j)+" "+str(i)+str(i2)+" "+str(j2)+str(j))
+    #                    for i3 in range(i2,len(puzzle[:]),2):
+    #                        for ij in range(j2,len(puzzle[0,:]),2):
+    #                           clauses+=[-1*int(puzzle[i,j,x]),int(puzzle[j3,j2,x]),-1*int(puzzle[i2,i3,x])]
+    #                clauses_hieuristic.append(clauses)
+
     return clauses_hieuristic
 
 
@@ -118,7 +136,7 @@ def create_solution(result_list,encoding):
         for j in range(9):
             puzzle[i][j]=list_r[counter]-81*i-9*j
             counter+=1
-    #print(puzzle)
+    print(puzzle)
 
 def main():
 
@@ -126,24 +144,33 @@ def main():
     #sudokus=readSudoku(sys.argv[1])
     sudokus=pd.read_csv(sys.argv[1])
     #print(sudokus)
-    average = 0
+    average=0
+    average1 = 0
+
+    average=[]
+    average1=[]
     for index ,sudoku_info in sudokus.iterrows():
         puzzle=readSudoku(sudoku_info[0])
+
         cnf1 = encode_at_least_one(encoding)
         cnf2 = encode_at_most_one(encoding)
-        cnf3 = encode_hieuristics(encoding)
+        cnf3 = encode_X_wing(encoding)
         cnf4 = encode_givens(puzzle ,encoding)
-        cnf=cnf1+cnf2+cnf4
+        cnf_hieuristics=cnf1+cnf2+cnf3+cnf4
 
-        start = time.time()
-        result_list = pycosat.solve(cnf)
-        end = time.time()
+        start = time.clock()
+        result_list = pycosat.solve(cnf_hieuristics)
+        end = time.clock()
+        average.append(end-start)
+
         if result_list=='UNSAT':
             print ("error")
 
+        #print (result_list)
         create_solution(result_list,encoding)
-        average+=end-start
-    print (average/len(sudokus))
+        #average1+=end1-start1
+    print ('Average time with hieuristics: '+str(sum(average)/len(sudokus)))
+    #print ('Average time without hieuristics: '+str(average1/len(sudokus)))
 
 if __name__ == '__main__':
     main()
