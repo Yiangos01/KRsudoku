@@ -10,3 +10,6 @@
 ### -m or p stands for the SAT solver that you want to use p for picoSAT and m for miniSAT
 ### the difference is on the result data.
 ### -x or ' ' if you want to apply x wing write x
+
+# Data
+### Sudokus are grouped into categories based on its complexity and diffficulty
